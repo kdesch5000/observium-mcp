@@ -3,7 +3,7 @@
 import os
 from typing import Any, Optional
 from ..database import execute_query, execute_single
-from ..rrd import get_rrd_path, fetch_rrd_data
+from ..rrd import get_rrd_path, fetch_rrd_data, rrd_file_exists, list_device_rrd_files
 
 
 def format_speed(speed: Optional[int]) -> str:
@@ -233,20 +233,118 @@ def get_port_traffic(
     }
     rrd_start = period_map.get(period, "-1d")
 
-    # Build RRD file path - Observium uses port-{device_id}-{port_id}.rrd
-    rrd_file = os.path.join(
-        get_rrd_path(),
-        port["hostname"],
-        f"port-{port['port_id']}.rrd"
-    )
+    # Find the correct RRD file - Observium may use different naming conventions
+    # Try: port-{ifIndex}.rrd, port-{port_id}.rrd
+    rrd_base = os.path.join(get_rrd_path(), port["hostname"])
+    rrd_file = None
 
-    if os.path.exists(rrd_file):
+    # Get ifIndex from database
+    ifindex_query = "SELECT ifIndex FROM ports WHERE port_id = %s"
+    ifindex_result = execute_single(ifindex_query, (port_id,))
+    ifindex = ifindex_result.get("ifIndex") if ifindex_result else None
+
+    # Try different RRD file naming patterns
+    candidates = []
+    if ifindex:
+        candidates.append(f"port-{ifindex}.rrd")
+    candidates.append(f"port-{port['port_id']}.rrd")
+
+    # Also check available RRD files to find a match
+    device_rrds = list_device_rrd_files(port["hostname"])
+    port_rrds = [f for f in device_rrds if f.startswith("port-") and not f.startswith("port-ipv6")]
+
+    for candidate in candidates:
+        candidate_path = os.path.join(rrd_base, candidate)
+        if rrd_file_exists(candidate_path):
+            rrd_file = candidate_path
+            break
+
+    if rrd_file:
         rrd_data = fetch_rrd_data(rrd_file, start=rrd_start)
         if "error" not in rrd_data:
-            result["historical"] = {
+            # Calculate statistics including peak values
+            historical = {
                 "period": period,
+                "rrd_file": os.path.basename(rrd_file),
                 "datasources": rrd_data.get("datasources", []),
                 "data_points": len(rrd_data.get("timestamps", [])),
             }
 
+            # Calculate peak and average for in/out traffic
+            stats = calculate_port_stats(rrd_data, speed)
+            if stats:
+                historical["statistics"] = stats
+
+            result["historical"] = historical
+
     return result
+
+
+def calculate_port_stats(rrd_data: dict, port_speed_bps: Optional[int]) -> dict:
+    """Calculate peak and average statistics from RRD data."""
+    stats = {}
+    datasources = rrd_data.get("datasources", [])
+    data = rrd_data.get("data", [])
+    timestamps = rrd_data.get("timestamps", [])
+
+    if not data or not datasources:
+        return stats
+
+    # Find indices for INOCTETS and OUTOCTETS datasources
+    in_idx = None
+    out_idx = None
+    for i, ds in enumerate(datasources):
+        ds_lower = ds.lower()
+        if "in" in ds_lower and "octet" in ds_lower:
+            in_idx = i
+        elif "out" in ds_lower and "octet" in ds_lower:
+            out_idx = i
+
+    # If standard names not found, assume first two columns are in/out
+    if in_idx is None and len(datasources) >= 1:
+        in_idx = 0
+    if out_idx is None and len(datasources) >= 2:
+        out_idx = 1
+
+    # Calculate stats for inbound traffic
+    if in_idx is not None:
+        in_values = []
+        for row in data:
+            if in_idx < len(row) and row[in_idx] is not None:
+                # Convert bytes/sec to bits/sec
+                in_values.append(row[in_idx] * 8)
+
+        if in_values:
+            peak_in = max(in_values)
+            avg_in = sum(in_values) / len(in_values)
+            stats["in"] = {
+                "peak_bps": peak_in,
+                "peak_mbps": peak_in / 1_000_000,
+                "avg_bps": avg_in,
+                "avg_mbps": avg_in / 1_000_000,
+            }
+            if port_speed_bps and port_speed_bps > 0:
+                stats["in"]["peak_utilization_pct"] = (peak_in / port_speed_bps) * 100
+                stats["in"]["avg_utilization_pct"] = (avg_in / port_speed_bps) * 100
+
+    # Calculate stats for outbound traffic
+    if out_idx is not None:
+        out_values = []
+        for row in data:
+            if out_idx < len(row) and row[out_idx] is not None:
+                out_values.append(row[out_idx] * 8)
+
+        if out_values:
+            peak_out = max(out_values)
+            avg_out = sum(out_values) / len(out_values)
+            stats["out"] = {
+                "peak_bps": peak_out,
+                "peak_mbps": peak_out / 1_000_000,
+                "avg_bps": avg_out,
+                "avg_mbps": avg_out / 1_000_000,
+            }
+            if port_speed_bps and port_speed_bps > 0:
+                stats["out"]["peak_utilization_pct"] = (peak_out / port_speed_bps) * 100
+                stats["out"]["avg_utilization_pct"] = (avg_out / port_speed_bps) * 100
+
+    return stats
