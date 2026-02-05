@@ -6,6 +6,7 @@ sensor readings, alerts, and historical trends.
 """
 
 import os
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -20,7 +21,9 @@ from .tools.alerts import list_alerts, get_alert_summary
 from .tools.trends import get_trends, list_available_metrics
 
 # Load environment variables from .env file
-load_dotenv()
+# Use explicit path since working directory may vary when run via MCP
+_env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(_env_path)
 
 # Create the MCP server
 server = Server("observium-mcp")

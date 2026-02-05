@@ -9,6 +9,7 @@ from ..rrd import (
     list_device_rrd_files,
     fetch_rrd_data,
     get_rrd_info,
+    rrd_file_exists,
 )
 
 
@@ -75,7 +76,7 @@ def get_trends(
     rrd_file = os.path.join(get_device_rrd_path(hostname), rrd_filename)
 
     # Check if file exists, try alternative paths
-    if not os.path.exists(rrd_file):
+    if not rrd_file_exists(rrd_file):
         # Try to find alternative RRD files for this metric
         device_rrds = list_device_rrd_files(hostname)
         alternatives = []

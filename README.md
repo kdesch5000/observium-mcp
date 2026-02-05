@@ -50,11 +50,22 @@ cp config.example.env .env
 Edit `.env` with your settings:
 
 ```bash
+# Database connection (use SSH tunnel if remote)
 OBSERVIUM_DB_HOST=localhost
+OBSERVIUM_DB_PORT=3306
 OBSERVIUM_DB_NAME=observium
 OBSERVIUM_DB_USER=observium
 OBSERVIUM_DB_PASS=your_database_password
+
+# RRD data path (on the Observium server)
 OBSERVIUM_RRD_PATH=/opt/observium/rrd
+
+# Optional: SSH configuration for remote RRD access
+# If MCP server runs on a different machine than Observium,
+# set these to enable SSH-based RRD file access for trend data
+# OBSERVIUM_RRD_SSH_HOST=observium.example.com
+# OBSERVIUM_RRD_SSH_USER=pi
+# OBSERVIUM_RRD_SSH_PORT=22
 ```
 
 ## Usage
@@ -191,11 +202,15 @@ FLUSH PRIVILEGES;
 - Check database credentials in `.env`
 - Ensure the MySQL user has SELECT permissions
 
-### No RRD data
+### No RRD data / Trend tools failing
 
-- Verify `OBSERVIUM_RRD_PATH` points to the correct directory
+- Verify `OBSERVIUM_RRD_PATH` points to the correct directory on the Observium server
+- If running MCP on a different machine, configure SSH access:
+  - Set `OBSERVIUM_RRD_SSH_HOST` to the Observium server hostname
+  - Set `OBSERVIUM_RRD_SSH_USER` to a user with SSH access
+  - Ensure SSH key-based authentication is configured
+- Ensure `rrdtool` is installed on the Observium server (for remote) or locally
 - Check file permissions on the RRD directory
-- Ensure `rrdtool` is installed and in PATH
 
 ### Module not found
 
