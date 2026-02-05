@@ -1,12 +1,11 @@
-"""Database connection and query handling for Observium MySQL database."""
+"""Database connection and query handling for Observium MySQL/MariaDB database."""
 
 import os
 from contextlib import contextmanager
 from typing import Any, Generator, Optional
 
-import mysql.connector
-from mysql.connector import MySQLConnection
-from mysql.connector.cursor import MySQLCursor
+import pymysql
+from pymysql.cursors import DictCursor
 
 
 def get_db_config() -> dict[str, Any]:
@@ -17,14 +16,15 @@ def get_db_config() -> dict[str, Any]:
         "database": os.getenv("OBSERVIUM_DB_NAME", "observium"),
         "user": os.getenv("OBSERVIUM_DB_USER", "observium"),
         "password": os.getenv("OBSERVIUM_DB_PASS", ""),
+        "charset": "utf8mb4",
     }
 
 
 @contextmanager
-def get_connection() -> Generator[MySQLConnection, None, None]:
+def get_connection() -> Generator[pymysql.Connection, None, None]:
     """Context manager for database connections."""
     config = get_db_config()
-    conn = mysql.connector.connect(**config)
+    conn = pymysql.connect(**config)
     try:
         yield conn
     finally:
@@ -32,10 +32,11 @@ def get_connection() -> Generator[MySQLConnection, None, None]:
 
 
 @contextmanager
-def get_cursor(dictionary: bool = True) -> Generator[MySQLCursor, None, None]:
+def get_cursor(dictionary: bool = True) -> Generator[pymysql.cursors.Cursor, None, None]:
     """Context manager for database cursors with automatic connection handling."""
     with get_connection() as conn:
-        cursor = conn.cursor(dictionary=dictionary)
+        cursor_class = DictCursor if dictionary else pymysql.cursors.Cursor
+        cursor = conn.cursor(cursor_class)
         try:
             yield cursor
         finally:

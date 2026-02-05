@@ -1,8 +1,8 @@
 # MCP Server
 mcp>=1.0.0
 
-# Database
-mysql-connector-python>=8.0.0
+# Database (PyMySQL for MariaDB compatibility)
+pymysql>=1.0.0
 
 # RRD data access
 rrdtool>=0.1.0

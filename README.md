@@ -12,16 +12,17 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that e
 
 ## Requirements
 
-- Python 3.9+
-- Observium CE installation with MySQL database access
-- Access to Observium's RRD data directory
+- Python 3.10+ (required by MCP SDK)
+- Observium CE installation with MySQL/MariaDB database access
+- Access to Observium's RRD data directory (for trend data)
+- `rrdtool` and `librrd-dev` packages (for RRD data access)
 
 ## Installation
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/observium-mcp.git
+git clone https://github.com/kdesch5000/observium-mcp.git
 cd observium-mcp
 ```
 
