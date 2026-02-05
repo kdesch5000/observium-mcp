@@ -1,0 +1,14 @@
+# MCP Server
+mcp>=1.0.0
+
+# Database
+mysql-connector-python>=8.0.0
+
+# RRD data access
+rrdtool>=0.1.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Type hints
+typing-extensions>=4.0.0
