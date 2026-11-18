@@ -44,9 +44,9 @@ list_devices {"status_filter": "up", "os_filter": "unifi"}
 
 | Test ID | Test Case | Expected Result | Status |
 |---------|-----------|-----------------|--------|
-| DEV-010 | Lookup by device_id (e.g., 16) | Returns detailed info for unifi.mf | |
-| DEV-011 | Lookup by hostname "unifi.mf" | Returns same device as DEV-010 | |
-| DEV-012 | Lookup by sysname "netwatch" | Resolves via sysName fallback | |
+| DEV-010 | Lookup by device_id (e.g., 16) | Returns detailed info for server1.example.com | |
+| DEV-011 | Lookup by hostname "server1.example.com" | Returns same device as DEV-010 | |
+| DEV-012 | Lookup by sysname "observium-host" | Resolves via sysName fallback | |
 | DEV-013 | Verify port_count accuracy | Count matches actual ports | |
 | DEV-014 | Verify sensor_count accuracy | Count matches actual sensors | |
 | DEV-015 | Verify active_alert_count | Count matches active alerts | |
@@ -56,8 +56,8 @@ list_devices {"status_filter": "up", "os_filter": "unifi"}
 **Sample Test Commands:**
 ```
 get_device {"device_id": 16}
-get_device {"hostname": "unifi.mf"}
-get_device {"hostname": "netwatch"}
+get_device {"hostname": "server1.example.com"}
+get_device {"hostname": "observium-host"}
 get_device {"device_id": 99999}
 ```
 
@@ -70,7 +70,7 @@ get_device {"device_id": 99999}
 | Test ID | Test Case | Expected Result | Status |
 |---------|-----------|-----------------|--------|
 | PORT-001 | List ports by device_id (switch=12) | Returns all switch ports | |
-| PORT-002 | List ports by hostname "192.168.86.22" | Same result as PORT-001 | |
+| PORT-002 | List ports by hostname "192.0.2.22" | Same result as PORT-001 | |
 | PORT-003 | Filter admin_status="up" | Only administratively up ports | |
 | PORT-004 | Filter admin_status="down" | Only administratively down ports | |
 | PORT-005 | Filter oper_status="up" | Only operationally up ports | |
@@ -83,7 +83,7 @@ get_device {"device_id": 99999}
 **Sample Test Commands:**
 ```
 list_ports {"device_id": 12}
-list_ports {"hostname": "192.168.86.22"}
+list_ports {"hostname": "192.0.2.22"}
 list_ports {"device_id": 12, "oper_status": "up"}
 list_ports {"device_id": 12, "admin_status": "up", "oper_status": "down"}
 ```
@@ -107,7 +107,7 @@ list_ports {"device_id": 12, "admin_status": "up", "oper_status": "down"}
 **Sample Test Commands:**
 ```
 get_port_traffic {"port_id": 211}
-get_port_traffic {"device_hostname": "192.168.86.22", "port_name": "port 1"}
+get_port_traffic {"device_hostname": "192.0.2.22", "port_name": "port 1"}
 get_port_traffic {"port_id": 211, "period": "1h"}
 get_port_traffic {"port_id": 211, "period": "1w"}
 ```
@@ -137,7 +137,7 @@ get_port_traffic {"port_id": 211, "period": "1w"}
 ```
 list_sensors {}
 list_sensors {"device_id": 16}
-list_sensors {"hostname": "unifi.mf"}
+list_sensors {"hostname": "server1.example.com"}
 list_sensors {"sensor_class": "temperature"}
 list_sensors {"device_id": 26, "sensor_class": "temperature"}
 ```
@@ -210,11 +210,11 @@ get_alert_summary {}
 
 **Sample Test Commands:**
 ```
-get_trends {"hostname": "unifi.mf", "metric": "load"}
-get_trends {"hostname": "unifi.mf", "metric": "cpu"}
-get_trends {"hostname": "unifi.mf", "metric": "memory"}
-get_trends {"hostname": "unifi.mf", "metric": "load", "period": "1h"}
-get_trends {"hostname": "unifi.mf", "metric": "load", "period": "1w"}
+get_trends {"hostname": "server1.example.com", "metric": "load"}
+get_trends {"hostname": "server1.example.com", "metric": "cpu"}
+get_trends {"hostname": "server1.example.com", "metric": "memory"}
+get_trends {"hostname": "server1.example.com", "metric": "load", "period": "1h"}
+get_trends {"hostname": "server1.example.com", "metric": "load", "period": "1w"}
 get_trends {"device_id": 16, "metric": "load"}
 get_trends {"hostname": "nonexistent.host", "metric": "load"}
 ```
@@ -231,9 +231,9 @@ get_trends {"hostname": "nonexistent.host", "metric": "load"}
 
 **Sample Test Commands:**
 ```
-list_available_metrics {"hostname": "unifi.mf"}
+list_available_metrics {"hostname": "server1.example.com"}
 list_available_metrics {"device_id": 16}
-list_available_metrics {"hostname": "chopper.mf"}
+list_available_metrics {"hostname": "pi1.example.com"}
 ```
 
 ---
@@ -271,7 +271,7 @@ list_available_metrics {"hostname": "chopper.mf"}
 - [x] SSH tunnel running (`./start-tunnel.sh`)
 - [x] MCP server configured in Claude Code
 - [x] Database accessible on port 33061
-- [x] SSH access to netwatch.mf for RRD files
+- [x] SSH access to observium.example.com for RRD files
 
 **Test Results Summary:**
 | Category | Passed | Failed | Skipped |
@@ -292,7 +292,7 @@ list_available_metrics {"hostname": "chopper.mf"}
 
 **Notes:**
 - All 9 MCP tools are now fully functional
-- Trend data requires SSH access to netwatch.mf (configured via OBSERVIUM_RRD_SSH_HOST)
+- Trend data requires SSH access to observium.example.com (configured via OBSERVIUM_RRD_SSH_HOST)
 - .env file updated with SSH configuration for remote RRD access
 
 
@@ -314,18 +314,18 @@ list_available_metrics {"hostname": "chopper.mf"}
 Based on current Observium inventory:
 
 **Devices:**
-- unifi.mf (device_id: 16) - Linux server, many sensors
-- switch (device_id: 12, hostname: 192.168.86.22) - D-Link switch with ports
-- chopper.mf (device_id: 26) - Pi 5 with temperature sensors
-- netwatch.mf (device_id: 17) - Observium server itself
+- server1.example.com (device_id: 16) - Linux server, many sensors
+- switch (device_id: 12, hostname: 192.0.2.22) - D-Link switch with ports
+- pi1.example.com (device_id: 26) - Pi 5 with temperature sensors
+- observium.example.com (device_id: 17) - Observium server itself
 
 **Ports:**
 - Switch port 211 - Has traffic data
 - Switch port 233 - Has alert (Basement TV Internet Port)
 
 **Sensors:**
-- Temperature sensors on: chopper.mf, unifi.mf, fortcox, home.mf
-- Multiple CPU core sensors on unifi.mf
+- Temperature sensors on: pi1.example.com, server1.example.com, remote-pi1, ha.example.com
+- Multiple CPU core sensors on server1.example.com
 
 **Alerts:**
 - Active "Device Rebooted" alerts on recent reboots
@@ -336,7 +336,7 @@ Based on current Observium inventory:
 
 ## Automated Test Script (Future)
 
-Location: `/home/kdesch/scripts/observium-mcp/tests/`
+Location: `/path/to/observium-mcp/tests/`
 
 ```python
 # TODO: Create pytest-based automated tests

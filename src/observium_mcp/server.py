@@ -165,7 +165,7 @@ RETURNS:
 
 EXAMPLE QUESTIONS:
 - "Tell me about the firewall"
-- "What's the uptime of unifi.mf?"
+- "What's the uptime of server1.example.com?"
 - "Show details for device 16"
 - "How many ports does the switch have?"
 

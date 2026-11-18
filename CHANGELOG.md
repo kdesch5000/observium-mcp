@@ -36,6 +36,10 @@
   the remote `test -e '<path>'` shell strings.
 - `start-tunnel.sh`.
 
+### Docs
+- Sanitized `TEST_PLAN.md` and a tool-description example: real hostnames, LAN IPs and a home path
+  replaced with `example.com` / RFC 5737 (`192.0.2.x`) / `/path/to/` placeholders.
+
 ### Tests
 - New `tests/test_unit.py` and `tests/test_e2e.py` (33 tests, no external services): auth edge cases,
   health 200/503, settings validation, RRD parsing/local invocation, a real uvicorn + MCP HTTP client
