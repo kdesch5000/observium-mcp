@@ -1,12 +1,15 @@
 # Observium MCP Server - Comprehensive Test Plan
 
 ## Overview
-This test plan verifies all 9 MCP tools in the observium-mcp service. Each tool should be tested systematically to ensure reliability.
+This test plan verifies all 10 MCP tools in the observium-mcp service. Each tool should be tested systematically to ensure reliability.
 
-**Test Environment:**
-- Database: MariaDB via SSH tunnel (port 33061)
-- RRD Path: `/opt/observium/rrd` on netwatch.mf
-- SSH Tunnel Required: `./start-tunnel.sh`
+**Test Environment (since 0.2.0, 2026-11-18):**
+- Server runs on the Observium host as `observium-mcp.service` (HTTP, 127.0.0.1:18765), published via `tailscale serve` on :8765
+- Database: local MariaDB unix socket, read-only `observium_mcp` account
+- RRD Path: `/opt/observium/rrd` read locally
+- Automated suite: `pytest tests/` (no services needed) — run before manual testing
+
+*(0.1.x used an SSH tunnel on port 33061 and SSH for RRD files; see the 2026-02-05 log below.)*
 
 ---
 
@@ -240,7 +243,7 @@ list_available_metrics {"hostname": "chopper.mf"}
 | Test ID | Test Case | Expected Result | Status |
 |---------|-----------|-----------------|--------|
 | ERR-001 | Database connection failure | Graceful error message | |
-| ERR-002 | SSH tunnel not running | Connection refused error | |
+| ERR-002 | Missing/wrong bearer token | HTTP 401, no tool output (automated: test_unit, test_e2e) | |
 | ERR-003 | Invalid device_id type | Parameter validation error | |
 | ERR-004 | Invalid period value | Parameter validation error | |
 | ERR-005 | RRD path not accessible | File not found error | |
@@ -292,6 +295,17 @@ list_available_metrics {"hostname": "chopper.mf"}
 - Trend data requires SSH access to netwatch.mf (configured via OBSERVIUM_RRD_SSH_HOST)
 - .env file updated with SSH configuration for remote RRD access
 
+
+### Session: 2026-11-18 (0.2.0 HTTP service)
+
+**Automated:** `pytest tests/` — 33 passed (unit + e2e over real uvicorn and stdio subprocess).
+
+**Live checks against the deployed service:**
+- [x] `/health` over tailnet → `{"status":"ok","database":true}`
+- [x] `/mcp` without token → 401; not reachable on the LAN IP (tailnet listener only)
+- [x] DB grants: `USAGE` + `SELECT ON observium.*` only
+- [x] Real MCP session: initialize, 10 tools listed, `get_device` and `get_trends` (RRD via local rrdtool under the systemd sandbox) returned data
+- [x] `claude mcp list` → observium (HTTP) Connected
 
 ---
 

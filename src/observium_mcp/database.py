@@ -9,15 +9,34 @@ from pymysql.cursors import DictCursor
 
 
 def get_db_config() -> dict[str, Any]:
-    """Get database configuration from environment variables."""
-    return {
-        "host": os.getenv("OBSERVIUM_DB_HOST", "localhost"),
-        "port": int(os.getenv("OBSERVIUM_DB_PORT", "3306")),
+    """Get database configuration from environment variables.
+
+    If OBSERVIUM_DB_SOCKET is set, connect over that unix socket (the normal
+    case when running on the Observium host) and ignore host/port.
+    """
+    config: dict[str, Any] = {
         "database": os.getenv("OBSERVIUM_DB_NAME", "observium"),
         "user": os.getenv("OBSERVIUM_DB_USER", "observium"),
         "password": os.getenv("OBSERVIUM_DB_PASS", ""),
         "charset": "utf8mb4",
+        "connect_timeout": int(os.getenv("OBSERVIUM_DB_CONNECT_TIMEOUT", "5")),
     }
+    socket_path = os.getenv("OBSERVIUM_DB_SOCKET")
+    if socket_path:
+        config["unix_socket"] = socket_path
+    else:
+        config["host"] = os.getenv("OBSERVIUM_DB_HOST", "localhost")
+        config["port"] = int(os.getenv("OBSERVIUM_DB_PORT", "3306"))
+    return config
+
+
+def check_connection() -> bool:
+    """Return True if the database answers a trivial query."""
+    try:
+        row = execute_single("SELECT 1 AS ok")
+        return bool(row) and row.get("ok") == 1
+    except Exception:
+        return False
 
 
 @contextmanager

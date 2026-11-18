@@ -76,7 +76,7 @@ TIPS FOR BEST RESULTS:
 """
 
 # Create the MCP server with instructions
-server = Server("observium-mcp")
+server = Server("observium-mcp", instructions=SERVER_INSTRUCTIONS)
 
 
 @server.list_tools()
@@ -914,22 +914,46 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
 
 
 async def main():
-    """Run the MCP server."""
+    """Run the MCP server over stdio."""
     async with stdio_server() as (read_stream, write_stream):
-        init_options = server.create_initialization_options()
-        # Add server instructions to initialization
-        init_options.instructions = SERVER_INSTRUCTIONS
-        await server.run(
-            read_stream,
-            write_stream,
-            init_options
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
-def run():
+def parse_args(argv: Optional[list[str]] = None):
+    """Parse command-line options. Flags override OBSERVIUM_MCP_* env vars."""
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="observium-mcp", description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default=os.getenv("OBSERVIUM_MCP_TRANSPORT", "stdio"),
+        help="stdio (default, for local clients) or http (streamable HTTP service)",
+    )
+    parser.add_argument("--host", help="HTTP bind address (env OBSERVIUM_MCP_HOST, default 127.0.0.1)")
+    parser.add_argument("--port", type=int, help="HTTP port (env OBSERVIUM_MCP_PORT, default 18765)")
+    return parser.parse_args(argv)
+
+
+def run(argv: Optional[list[str]] = None):
     """Entry point for the server."""
-    import asyncio
-    asyncio.run(main())
+    args = parse_args(argv)
+    if args.transport == "http":
+        from .http_app import ConfigError, HttpSettings, serve
+
+        settings = HttpSettings.from_env()
+        if args.host:
+            settings.host = args.host
+        if args.port:
+            settings.port = args.port
+        try:
+            serve(server, settings)
+        except ConfigError as e:
+            raise SystemExit(f"observium-mcp: {e}")
+    else:
+        import asyncio
+
+        asyncio.run(main())
 
 
 if __name__ == "__main__":

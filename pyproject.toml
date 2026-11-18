@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "observium-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Model Context Protocol server for Observium CE network monitoring"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     {name = "Kristian Desch"}
 ]
@@ -20,17 +20,20 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: System :: Monitoring",
     "Topic :: System :: Networking :: Monitoring",
 ]
 
 dependencies = [
-    "mcp>=1.0.0",
+    # 2.x removed the lowlevel decorator API this server uses; migrate before lifting the cap.
+    "mcp>=1.26,<2",
     "pymysql>=1.0.0",
+    "starlette>=0.40",
+    "uvicorn>=0.30",
     "python-dotenv>=1.0.0",
     "typing-extensions>=4.0.0",
 ]
@@ -39,6 +42,7 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+    "httpx>=0.27",
     "black>=23.0.0",
     "ruff>=0.1.0",
 ]
@@ -56,9 +60,13 @@ where = ["src"]
 
 [tool.black]
 line-length = 100
-target-version = ["py39"]
+target-version = ["py310"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

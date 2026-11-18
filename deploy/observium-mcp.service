@@ -1,0 +1,39 @@
+[Unit]
+Description=Observium MCP server (streamable HTTP on loopback; published via tailscale serve)
+Documentation=https://github.com/kdesch5000/observium-mcp
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=observium-mcp
+Group=observium-mcp
+EnvironmentFile=/etc/observium-mcp/observium-mcp.env
+ExecStart=/opt/observium-mcp/venv/bin/observium-mcp --transport http
+Restart=on-failure
+RestartSec=5
+
+# Hardening: read-only view of the system; needs only the MariaDB socket,
+# loopback TCP, and read access to the RRD tree.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+UMask=0077
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

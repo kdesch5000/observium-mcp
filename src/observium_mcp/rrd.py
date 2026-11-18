@@ -1,52 +1,12 @@
 """RRD data access for historical metrics from Observium.
 
-Supports both local and remote (SSH) access to RRD files.
-For remote access, set OBSERVIUM_RRD_SSH_HOST in your .env file.
+The server runs on the Observium host and reads RRD files from local disk
+with the ``rrdtool`` CLI. (Remote SSH access was removed in 0.2.0.)
 """
 
 import os
 import subprocess
-from datetime import datetime, timedelta
 from typing import Any, Optional
-
-
-def get_ssh_config() -> dict[str, Optional[str]]:
-    """Get SSH configuration for remote RRD access."""
-    return {
-        "host": os.getenv("OBSERVIUM_RRD_SSH_HOST"),
-        "user": os.getenv("OBSERVIUM_RRD_SSH_USER", "pi"),
-        "port": os.getenv("OBSERVIUM_RRD_SSH_PORT", "22"),
-        "key": os.getenv("OBSERVIUM_RRD_SSH_KEY"),  # Optional: path to SSH key
-    }
-
-
-def is_remote_mode() -> bool:
-    """Check if we should use SSH for remote RRD access."""
-    return bool(os.getenv("OBSERVIUM_RRD_SSH_HOST"))
-
-
-def build_ssh_cmd(cmd: list[str]) -> list[str]:
-    """Build an SSH command to run remotely."""
-    ssh_config = get_ssh_config()
-    ssh_cmd = ["ssh"]
-
-    if ssh_config["port"] and ssh_config["port"] != "22":
-        ssh_cmd.extend(["-p", ssh_config["port"]])
-
-    if ssh_config["key"]:
-        ssh_cmd.extend(["-i", ssh_config["key"]])
-
-    # Add options for non-interactive use
-    ssh_cmd.extend(["-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new"])
-
-    # Add user@host
-    target = f"{ssh_config['user']}@{ssh_config['host']}"
-    ssh_cmd.append(target)
-
-    # Add the actual command
-    ssh_cmd.extend(cmd)
-
-    return ssh_cmd
 
 
 def get_rrd_path() -> str:
@@ -59,62 +19,17 @@ def get_device_rrd_path(hostname: str) -> str:
     return os.path.join(get_rrd_path(), hostname)
 
 
-def remote_path_exists(path: str) -> bool:
-    """Check if a path exists on the remote server."""
-    # Use shell=True equivalent by passing command as a single string to remote shell
-    cmd = build_ssh_cmd([f"test -e '{path}'"])
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def remote_is_dir(path: str) -> bool:
-    """Check if a path is a directory on the remote server."""
-    cmd = build_ssh_cmd([f"test -d '{path}'"])
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def remote_list_dir(path: str) -> list[str]:
-    """List files in a directory on the remote server."""
-    cmd = build_ssh_cmd(["ls", "-1", path])
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if result.returncode == 0:
-            return [f.strip() for f in result.stdout.strip().split("\n") if f.strip()]
-        return []
-    except Exception:
-        return []
-
-
 def list_device_rrd_files(hostname: str) -> list[str]:
     """List all RRD files for a device."""
     device_path = get_device_rrd_path(hostname)
-
-    if is_remote_mode():
-        # Remote mode: use SSH
-        if not remote_is_dir(device_path):
-            return []
-        files = remote_list_dir(device_path)
-        return [f for f in files if f.endswith(".rrd")]
-    else:
-        # Local mode
-        if not os.path.isdir(device_path):
-            return []
-        return [f for f in os.listdir(device_path) if f.endswith(".rrd")]
+    if not os.path.isdir(device_path):
+        return []
+    return [f for f in os.listdir(device_path) if f.endswith(".rrd")]
 
 
 def rrd_file_exists(rrd_file: str) -> bool:
-    """Check if an RRD file exists (local or remote)."""
-    if is_remote_mode():
-        return remote_path_exists(rrd_file)
-    else:
-        return os.path.exists(rrd_file)
+    """Check if an RRD file exists."""
+    return os.path.exists(rrd_file)
 
 
 def fetch_rrd_data(
@@ -154,11 +69,7 @@ def fetch_rrd_data(
     if resolution:
         rrdtool_cmd.extend(["--resolution", str(resolution)])
 
-    # Execute locally or via SSH
-    if is_remote_mode():
-        cmd = build_ssh_cmd(rrdtool_cmd)
-    else:
-        cmd = rrdtool_cmd
+    cmd = rrdtool_cmd
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=60)
@@ -226,11 +137,7 @@ def get_rrd_info(rrd_file: str) -> dict[str, Any]:
     # Build rrdtool info command
     rrdtool_cmd = ["rrdtool", "info", rrd_file]
 
-    # Execute locally or via SSH
-    if is_remote_mode():
-        cmd = build_ssh_cmd(rrdtool_cmd)
-    else:
-        cmd = rrdtool_cmd
+    cmd = rrdtool_cmd
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)

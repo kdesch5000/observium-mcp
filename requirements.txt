@@ -1,14 +1,9 @@
-# MCP Server
-mcp>=1.0.0
-
-# Database (PyMySQL for MariaDB compatibility)
+# Runtime dependencies (mirrors pyproject.toml).
+# mcp 2.x removed the lowlevel decorator API used here; keep the cap until migrated.
+mcp>=1.26,<2
 pymysql>=1.0.0
-
-# RRD data access
-rrdtool>=0.1.0
-
-# Environment configuration
+starlette>=0.40
+uvicorn>=0.30
 python-dotenv>=1.0.0
-
-# Type hints
 typing-extensions>=4.0.0
+# RRD reads use the system `rrdtool` CLI (apt install rrdtool), not a Python binding.
